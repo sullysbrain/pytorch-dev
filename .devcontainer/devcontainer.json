@@ -1,0 +1,56 @@
+{
+  "name": "PyTorch-dev",
+  "dockerComposeFile": "../docker-compose.yml",
+  // "build": {
+    // "dockerfile": "Dockerfile",
+    // "context": "."
+  // },
+
+  // "containerEnv": {
+  //   "UV_PROJECT_ENVIRONMENT": "/opt/venv",
+  //   "UV_LINK_MODE": "copy"
+  // },
+  
+  "service": "app",
+  "workspaceFolder": "/workspace",
+  // "remoteUser": "root",
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python"
+        // "ms-toolsai.jupyter",
+        // "ms-azuretools.vscode-docker"
+      ]
+      // "settings": {
+      //   // "python.defaultInterpreterPath": "/usr/bin/python"
+      //   "python.defaultInterpreterPath": ".venv/bin/python"
+      // }
+    }
+  },
+
+  // "containerEnv": {
+  //   "COMFYUI_MODELS_DIR": "/data/models/comfyui_models",
+  //   "COMFYUI_OUTPUT_DIR": "/data/outputs",
+  //   "HUGGINGFACE_HUB_CACHE": "/data/models/hf_cache",
+  //   "HF_HOME": "/data/models/hf_cache",
+  //   "TORCH_HOME": "/data/models/hf_cache"
+  // },
+
+  // "mounts": [
+  //   // LOCAL MAC: change source to ${localWorkspaceFolder}/.data if you prefer
+  //   "source=${localWorkspaceFolder}/.data,target=/data,type=bind"
+  //   // Cloud version
+  //   // "source=/data,target=/data,type=bind"
+  // ],
+
+  // "forwardPorts": [8188],
+   "postCreateCommand": "bash -lc '[ -x /opt/venv/bin/python ] || uv venv /opt/venv; UV_PROJECT_ENVIRONMENT=/opt/venv uv sync --frozen; grep -qxF \"[ -x /opt/venv/bin/activate ] && source /opt/venv/bin/activate\" ~/.bashrc || echo \"[ -x /opt/venv/bin/activate ] && source /opt/venv/bin/activate\" >> ~/.bashrc'",
+
+  "postStartCommand": "bash -lc '[ -x /opt/venv/bin/python ] || (uv venv /opt/venv && UV_PROJECT_ENVIRONMENT=/opt/venv uv sync --frozen)'",
+
+  "postAttachCommand": "bash -lc 'source /opt/venv/bin/activate || true' && echo '[postAttach] container attached'",
+
+  "overrideCommand": true,
+  // "postCreateCommand": "bash"
+}
