@@ -1,27 +1,27 @@
 {
-  "name": "PyTorch-dev",
+  "name": "jupyter-gpu-dev",
   "dockerComposeFile": "../docker-compose.yml",
   
   "service": "app",
-  "workspaceFolder": "/workspace",
+  // "workspaceFolder": "/workspace",
 
-  "customizations": {
-    "vscode": {
-      "extensions": [
-        "ms-python.python",
-        "ms-toolsai.jupyter",
-      ]
-    }
-  },
+  // "customizations": {
+  //   "vscode": {
+  //     "extensions": [
+  //       "ms-python.python",
+  //       "ms-toolsai.jupyter",
+  //     ]
+  //   }
+  // },
 
   "forwardPorts": [8888],
-	"portsAttributes": {
-		"8888": {
-			"label": "Jupyter",
-			"requireLocalPort": true,
-			"onAutoForward": "ignore"
-		}
-	},
+	// "portsAttributes": {
+	// 	"8888": {
+	// 		"label": "Jupyter",
+	// 		"requireLocalPort": true,
+	// 		"onAutoForward": "ignore"
+	// 	}
+	// },
 
-  "overrideCommand": false,
+  "overrideCommand": false
 }

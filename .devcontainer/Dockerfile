@@ -1,53 +1,51 @@
-# ---- Minimal, reliable Jupyter + UV dev container ----
-FROM python:3.12-slim
+FROM nvidia/cuda:12.1.1-cudnn8-runtime-ubuntu22.04
 
-ENV DEBIAN_FRONTEND=noninteractive
+ENV DEBIAN_FRONTEND=noninteractive \
+    UV_COMPILE_BYTECODE=1 \
+    UV_LINK_MODE=copy
 
+# System packages
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    tini curl git build-essential libgl1 ca-certificates \
- && rm -rf /var/lib/apt/lists/*
+    curl tini git build-essential libgl1 ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
 
-# ---- Install uv (official installer) ----
-# Install to /usr/local/bin so it’s globally available
-RUN curl -LsSf https://astral.sh/uv/install.sh | \
-    UV_INSTALL_DIR=/usr/local/bin sh
+# Tell uv to use our custom venv location
+RUN curl -LsSf https://astral.sh/uv/install.sh | UV_INSTALL_DIR=/usr/local/bin sh \
+ && uv --version 
 
-RUN uv --version
-
-# ---- Create UV-managed virtual environment ----
-ENV VENV_PATH=/opt/venv
-ENV UV_PROJECT_ENVIRONMENT=$VENV_PATH
-
-# Create venv using uv (NOT python -m venv)
-RUN uv venv --python 3.12 $VENV_PATH
-
-# Activate venv globally for all subsequent RUN and CMD
-ENV PATH="$VENV_PATH/bin:$PATH"
-ENV VIRTUAL_ENV="$VENV_PATH"
+ENV VENV_PATH=/opt/venv \
+    UV_PROJECT_ENVIRONMENT=/opt/venv
+RUN uv venv --python 3.12 /opt/venv
+ENV VIRTUAL_ENV=/opt/venv
+ENV PATH=/opt/venv/bin:$PATH
 
 WORKDIR /workspace
 
-# ---- Optional: install dependencies from requirements.txt using uv ----
-COPY pyproject.toml* ./
+# Copy dependency files
+COPY pyproject.toml* uv.lock* ./
 
-# ---- Install Jupyter + IPykernel using uv ----
-# RUN uv pip install --system --no-cache jupyterlab ipykernel \
-RUN uv sync && uv pip install --no-cache jupyterlab ipykernel \
- && /opt/venv/bin/python -m ipykernel install \
+# Install + register + patch kernel in ONE layer (guaranteed to work)
+RUN uv sync --no-cache && \
+    uv pip install --no-cache jupyterlab ipykernel \
+    && python -m ipykernel install \
       --name "python312-uv" \
       --display-name "Python 3.12 (uv)" \
       --prefix=/usr/local
 
-# ---- Writable Jupyter runtime dirs ----
+# (Optional) PyTorch CUDA 12.1 wheels — uncomment if you need them here
+# RUN uv pip install --no-cache --index-url https://download.pytorch.org/whl/cu121 \
+#       torch torchvision torchaudio
+
+# Copy your code
+COPY . .
+
+# Jupyter runtime dir
 ENV JUPYTER_RUNTIME_DIR=/tmp/jupyter \
     JUPYTER_DATA_DIR=/usr/local/share/jupyter \
     JUPYTER_CONFIG_DIR=/etc/jupyter
-
 RUN mkdir -p /tmp/jupyter /etc/jupyter && chmod -R 777 /tmp/jupyter
 
 EXPOSE 8888
-
 ENTRYPOINT ["/usr/bin/tini", "--"]
 
-# ---- Auto-start Jupyter Lab (token disabled) ----
-CMD ["jupyter", "lab", "--ip=0.0.0.0", "--port=8888", "--no-browser", "--allow-root", "--ServerApp.root_dir=/workspace",     "--ServerApp.token="]
+CMD ["jupyter", "lab", "--ip=0.0.0.0", "--port=8888", "--no-browser", "--allow-root", "--ServerApp.root_dir=/workspace", "--ServerApp.token="]
