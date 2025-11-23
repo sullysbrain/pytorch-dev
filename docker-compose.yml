@@ -6,6 +6,8 @@ services:
     # container_name: app
     # working_dir: /workspace
 
+    ports:
+      - 8888:8888
     volumes:
       - .:/workspace:cached
       - /opt/venv

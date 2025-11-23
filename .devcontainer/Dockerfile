@@ -4,9 +4,7 @@ FROM nvidia/cuda:12.1.1-cudnn8-devel-ubuntu22.04
 
 # Base OS deps
 RUN apt-get update && apt-get install -y \
-    python3 python3-pip python3-venv git curl ffmpeg libgl1 ca-certificates 
-#  && rm -rf /var/lib/apt/lists/* \
-#  && ln -s /usr/bin/python3 /usr/bin/python
+    python3 python3-pip python3-venv git curl ffmpeg libgl1 ca-certificates
 
 # 3) uv manager
 FROM python:3.12-slim-trixie
@@ -41,7 +39,7 @@ COPY pyproject.toml  ./
 
 
 # Expose ComfyUI (web) port
-# EXPOSE 8188
+EXPOSE 8888
 
 # Default command: run the web UI
 # CMD ["python", "main.py", "--listen", "0.0.0.0", "--port", "8188"]
