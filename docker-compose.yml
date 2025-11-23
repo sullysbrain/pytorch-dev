@@ -2,7 +2,7 @@ services:
   app:
     build:
       context: .
-      dockerfile: ./.devcontainer/Dockerfile
+      dockerfile: .devcontainer/Dockerfile
     # container_name: app
     # working_dir: /workspace
 
