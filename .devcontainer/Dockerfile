@@ -32,8 +32,8 @@ COPY pyproject.toml* ./
 
 # ---- Install Jupyter + IPykernel using uv ----
 # RUN uv pip install --system --no-cache jupyterlab ipykernel \
-RUN uv sync && uv pip install --system --no-cache ipykernel \
- && python -m ipykernel install \
+RUN uv sync && uv pip install --no-cache jupyterlab ipykernel \
+ && /opt/venv/bin/python -m ipykernel install \
       --name "python312-uv" \
       --display-name "Python 3.12 (uv)" \
       --prefix=/usr/local
