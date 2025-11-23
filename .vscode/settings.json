@@ -7,8 +7,8 @@
             "srcPath": ".",
             "envPath": "",
             "resourceGroup": "jupyter-dev",
-            "containerApp": "jupyter-notebook-ca",
-            "containerRegistry": "jupyternotebookda2097"
+            "containerApp": "jupyter-container",
+            "containerRegistry": "jupyterlabsrsc65bdf6"
         }
     ]
 }
