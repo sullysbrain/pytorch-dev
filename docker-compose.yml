@@ -3,23 +3,12 @@ services:
     build:
       context: .
       dockerfile: .devcontainer/Dockerfile
-    # container_name: app
-    # working_dir: /workspace
 
     ports:
-      - 8888:8888
+      - "127.0.0.1:8888:8888"
     volumes:
       - .:/workspace:cached
-      - /opt/venv
-      # - uvcache:/root/.cache
 
     environment:
       - PYTHONUNBUFFERED=1
 
-    # Keep container alive for Dev Containers to attach reliably
-    command: sleep infinity
-    # command: bash -lc "python src/main.py" && sleep infinity
-
-volumes:
-  venv:
-  uvcache:

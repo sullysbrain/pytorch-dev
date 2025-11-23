@@ -1,0 +1,14 @@
+{
+    "containerApps.deploymentConfigurations": [
+        {
+            "label": "jupyter-containerapp",
+            "type": "AcrDockerBuildRequest",
+            "dockerfilePath": ".devcontainer/Dockerfile",
+            "srcPath": ".",
+            "envPath": "",
+            "resourceGroup": "jupyter-dev",
+            "containerApp": "jupyter-containerapp",
+            "containerRegistry": "jupyterdev31f4ae"
+        }
+    ]
+}
