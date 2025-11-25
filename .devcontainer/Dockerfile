@@ -6,7 +6,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
 
 # System packages
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl tini git build-essential libgl1 ca-certificates \
+    curl tini git build-essential libgl1 ca-certificates ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 
 # Tell uv to use our custom venv location
@@ -22,30 +22,36 @@ ENV PATH=/opt/venv/bin:$PATH
 WORKDIR /workspace
 
 # Copy dependency files
-COPY pyproject.toml* uv.lock* ./
+# Copy dependency files
+# COPY pyproject.toml* uv.lock* ./
 
-# Install + register + patch kernel in ONE layer (guaranteed to work)
-RUN uv sync --no-cache && \
-    uv pip install --no-cache jupyterlab ipykernel \
-    && python -m ipykernel install \
-      --name "python312-uv" \
-      --display-name "Python 3.12 (uv)" \
-      --prefix=/usr/local
+
+# Install CUDA-enabled PyTorch (CUDA 12.1) into the uv venv
+# RUN uv pip install --no-cache --index-url https://download.pytorch.org/whl/cu121 torch torchvision torchaudio || true
+
+# Clone ComfyUI and install its requirements in editable mode
+RUN git clone --depth 1 https://github.com/comfyanonymous/ComfyUI.git /opt/ComfyUI && \
+    if [ -f /opt/ComfyUI/requirements.txt ]; then uv pip install --no-cache -r /opt/ComfyUI/requirements.txt || true; \
+    fi && \
+    uv pip install --no-cache -e /opt/ComfyUI || true
 
 # (Optional) PyTorch CUDA 12.1 wheels — uncomment if you need them here
 # RUN uv pip install --no-cache --index-url https://download.pytorch.org/whl/cu121 \
 #       torch torchvision torchaudio
 
 # Copy your code
+# Copy repository files
 COPY . .
 
-# Jupyter runtime dir
-ENV JUPYTER_RUNTIME_DIR=/tmp/jupyter \
-    JUPYTER_DATA_DIR=/usr/local/share/jupyter \
-    JUPYTER_CONFIG_DIR=/etc/jupyter
-RUN mkdir -p /tmp/jupyter /etc/jupyter && chmod -R 777 /tmp/jupyter
+# Create model and data mountpoints (named volumes will be mounted by compose)
+RUN mkdir -p /models /data && chown -R root:root /models /data && chmod -R 777 /models /data
 
-EXPOSE 8888
+EXPOSE 8188
 ENTRYPOINT ["/usr/bin/tini", "--"]
 
-CMD ["jupyter", "lab", "--ip=0.0.0.0", "--port=8888", "--no-browser", "--allow-root", "--ServerApp.root_dir=/workspace", "--ServerApp.token="]
+# Add a small launcher script and default to starting ComfyUI
+RUN mkdir -p /usr/local/bin
+COPY .devcontainer/scripts/start-comfyui.sh /usr/local/bin/start-comfyui.sh
+RUN chmod +x /usr/local/bin/start-comfyui.sh
+
+CMD ["/usr/local/bin/start-comfyui.sh"]

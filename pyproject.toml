@@ -1,13 +1,16 @@
 [project]
 name = "jupyter-gpu-dev"
 version = "0.1.0"
-description = "Jupyter Labs in container for cloud usage"
+description = "Jupyter Labs + ComfyUI devcontainer for GPU workloads"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
     "polars",
     "numpy",
-    "jupyter",
-    "ipykernel",
+    "imageio-ffmpeg",
+    "safetensors",
+    "transformers",
+    # ComfyUI will be installed from the official GitHub repo (editable install).
+    "ComfyUI @ git+https://github.com/comfyanonymous/ComfyUI.git@master#egg=ComfyUI",
 ]
 

@@ -1,27 +1,11 @@
 {
-  "name": "jupyter-gpu-dev",
+  "name": "comfyui-gpu-dev",
   "dockerComposeFile": "../docker-compose.yml",
-  
+
   "service": "app",
-  // "workspaceFolder": "/workspace",
+  "workspaceFolder": "/workspace",
 
-  // "customizations": {
-  //   "vscode": {
-  //     "extensions": [
-  //       "ms-python.python",
-  //       "ms-toolsai.jupyter",
-  //     ]
-  //   }
-  // },
-
-  "forwardPorts": [8888],
-	// "portsAttributes": {
-	// 	"8888": {
-	// 		"label": "Jupyter",
-	// 		"requireLocalPort": true,
-	// 		"onAutoForward": "ignore"
-	// 	}
-	// },
+  // "forwardPorts": [8188],
 
   "overrideCommand": false
 }

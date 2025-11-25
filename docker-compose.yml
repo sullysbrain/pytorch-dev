@@ -1,3 +1,5 @@
+version: "3.9"
+
 services:
   app:
     build:
@@ -5,10 +7,29 @@ services:
       dockerfile: .devcontainer/Dockerfile
 
     ports:
-      - "127.0.0.1:8888:8888"
+      - "127.0.0.1:8188:8188"
+
+    # Mount workspace and provide named volumes for models and data
     volumes:
       - .:/workspace:cached
+      - models:/models
+      - data:/data
 
     environment:
       - PYTHONUNBUFFERED=1
+      # - NVIDIA_VISIBLE_DEVICES=all
+
+    # GPU support (Docker Engine must support NVIDIA/container-toolkit)
+    # runtime: nvidia
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu]
+
+volumes:
+  models:
+  data:
 
