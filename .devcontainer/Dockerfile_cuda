@@ -1,0 +1,76 @@
+FROM nvidia/cuda:12.9.1-cudnn-devel-ubuntu24.04
+
+ARG DEBIAN_FRONTEND=noninteractive
+ENV WORKDIR=/workspace \
+    COMFYUI_PATH=/workspace/ComfyUI \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    # Use stable cu129 index; change if you want nightly
+    PIP_EXTRA_INDEX_URL="https://download.pytorch.org/whl/cu129"
+
+WORKDIR ${WORKDIR}
+
+# System packages
+RUN --mount=type=cache,target=/var/cache/apt \
+    apt-get update \
+    && apt-get upgrade -y \
+    && apt-get install -y --no-install-recommends \
+       python3.12 python3.12-dev python3-pip python3-venv \
+       tini jq ca-certificates git build-essential cmake ninja-build wget curl aria2 ffmpeg \
+       libgl1-mesa-dev libopengl0 gdb \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Ensure /usr/bin/python3 and pip point to python3.12 and pip for consistency
+RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.12 1 \
+ && python3 -m pip install --upgrade pip setuptools wheel
+
+# Create a non-root user for runtime
+ARG USER=comfy
+ARG UID=1000
+RUN useradd -m -u ${UID} -s /bin/bash ${USER} || true
+RUN mkdir -p ${WORKDIR} && chown -R ${USER}:${USER} ${WORKDIR}
+
+# Clone ComfyUI early so layer is cached; pinable via build-arg later
+ARG COMFYUI_VERSION=master
+RUN git clone --single-branch https://github.com/comfyanonymous/ComfyUI.git ${COMFYUI_PATH} \
+ && git -C ${COMFYUI_PATH} fetch --all --tags --prune \
+ && git -C ${COMFYUI_PATH} reset --hard ${COMFYUI_VERSION}
+
+# Copy unified requirements file (ensure it exists in build context)
+COPY requirements.txt ${WORKDIR}/requirements.txt
+
+# Install PyTorch (CUDA 12.9/cu129) explicitly before building xformers,
+# then install requirements and xformers. Use cache mounts for pip.
+RUN --mount=type=cache,target=/root/.cache/pip \
+    python3 -m pip install --upgrade pip setuptools wheel \
+    && python3 -m pip install --index-url ${PIP_EXTRA_INDEX_URL} --no-cache-dir --prefer-binary \
+       "torch" "torchvision" "torchaudio" || true \
+    && python3 -m pip install --no-cache-dir -r ${WORKDIR}/requirements.txt || true \
+    && python3 -m pip install -v --no-build-isolation -U git+https://github.com/facebookresearch/xformers.git@main#egg=xformers || true
+
+# Optional helper package (if present in context)
+COPY comfyui_helper comfyui_helper/ 
+RUN --mount=type=cache,target=/root/.cache/pip \
+    python3 -m pip install -e comfyui_helper/ || true
+
+# Ensure permissions for volumes and workspace
+RUN mkdir -p /models /data \
+ && chown -R ${USER}:${USER} /models /data ${COMFYUI_PATH} ${WORKDIR} \
+ && chmod -R 775 /models /data
+
+VOLUME [ "${COMFYUI_PATH}/user", "${COMFYUI_PATH}/output" , "${COMFYUI_PATH}/models", "${COMFYUI_PATH}/custom_nodes" ]
+
+EXPOSE 8188
+
+ENTRYPOINT [ "/usr/bin/tini", "--" ]
+
+# Add a small wrapper that ensures running as non-root and starts ComfyUI.
+# Make sure you have a start script in the repo or adjust this to call the installed entrypoint.
+COPY .devcontainer/scripts/start-comfyui.sh /usr/local/bin/start-comfyui.sh
+RUN chmod +x /usr/local/bin/start-comfyui.sh \
+ && chown ${USER}:${USER} /usr/local/bin/start-comfyui.sh
+
+USER ${USER}
+WORKDIR ${WORKDIR}
+CMD [ "/usr/local/bin/start-comfyui.sh" ]

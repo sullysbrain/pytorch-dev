@@ -1,4 +1,10 @@
-FROM nvidia/cuda:12.1.1-cudnn8-runtime-ubuntu22.04
+# Select base image at build time. Default is a plain Ubuntu image (CPU-only).
+# To build a CUDA-enabled image, pass:
+#   --build-arg BASE_IMAGE=nvidia/cuda:12.1.1-cudnn8-runtime-ubuntu22.04 \
+#   --build-arg USE_CUDA=true
+ARG BASE_IMAGE="ubuntu:22.04"
+ARG USE_CUDA="false"
+FROM ${BASE_IMAGE}
 
 ENV DEBIAN_FRONTEND=noninteractive \
     UV_COMPILE_BYTECODE=1 \
@@ -22,12 +28,21 @@ ENV PATH=/opt/venv/bin:$PATH
 WORKDIR /workspace
 
 # Copy dependency files
-# Copy dependency files
 # COPY pyproject.toml* uv.lock* ./
 
 
 # Install CUDA-enabled PyTorch (CUDA 12.1) into the uv venv
-# RUN uv pip install --no-cache --index-url https://download.pytorch.org/whl/cu121 torch torchvision torchaudio || true
+# Install PyTorch. For CUDA builds set `--build-arg USE_CUDA=true` and
+# optionally `--build-arg BASE_IMAGE=nvidia/cuda:12.1.1-cudnn8-runtime-ubuntu22.04`.
+# The conditional below installs CUDA wheels when USE_CUDA=true and falls back
+# to the CPU wheels when false.
+RUN if [ "${USE_CUDA}" = "true" ]; then \
+            echo "Installing CUDA-enabled PyTorch (cu121)"; \
+            uv pip install --no-cache --index-url https://download.pytorch.org/whl/cu121 torch torchvision torchaudio || true; \
+        else \
+            echo "Installing CPU PyTorch"; \
+            uv pip install --no-cache torch torchvision torchaudio || true; \
+        fi
 
 # Clone ComfyUI and install its requirements in editable mode
 RUN git clone --depth 1 https://github.com/comfyanonymous/ComfyUI.git /opt/ComfyUI && \
@@ -39,7 +54,6 @@ RUN git clone --depth 1 https://github.com/comfyanonymous/ComfyUI.git /opt/Comfy
 # RUN uv pip install --no-cache --index-url https://download.pytorch.org/whl/cu121 \
 #       torch torchvision torchaudio
 
-# Copy your code
 # Copy repository files
 COPY . .
 
