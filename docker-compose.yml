@@ -4,7 +4,11 @@ services:
   app:
     build:
       context: .
-      dockerfile: .devcontainer/Dockerfile
+      dockerfile: .devcontainer/Dockerfile_cuda
+      args:
+        # For local Mac builds we override the CUDA base image and disable CUDA installs.
+        BASE_IMAGE: "ubuntu:22.04"
+        USE_CUDA: "false"
 
     ports:
       - "127.0.0.1:8188:8188"
@@ -12,8 +16,10 @@ services:
     # Mount workspace and provide named volumes for models and data
     volumes:
       - .:/workspace:cached
-      - models:/models
-      - data:/data
+      - models:/opt/ComfyUI/models
+      - data:/opt/ComfyUI/data
+      - comfy_user:/opt/ComfyUI/user
+      - comfy_nodes:/opt/ComfyUI/nodes
 
     environment:
       - PYTHONUNBUFFERED=1
@@ -32,4 +38,6 @@ services:
 volumes:
   models:
   data:
+  comfy_user:
+  comfy_nodes:
 

@@ -1,11 +1,20 @@
 {
-  "name": "comfyui-gpu-dev",
-  "dockerComposeFile": "../docker-compose.yml",
-
+  "name": "pytorch-dev (local test)",
+  "dockerComposeFile": ["../docker-compose.yml"],
   "service": "app",
   "workspaceFolder": "/workspace",
-
-  // "forwardPorts": [8188],
-
-  "overrideCommand": false
+  "shutdownAction": "stopCompose",
+  "runServices": ["app"],
+  "remoteUser": "comfy",
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "terminal.integrated.shell.linux": "/bin/bash"
+      }
+    }
+  },
+  "containerEnv": {
+    "PYTHONUNBUFFERED": "1"
+  },
+  "overrideCommand": true
 }
