@@ -1,0 +1,73 @@
+# ARG for the base image (Default to NVIDIA for Azure/Prod)
+# To build for Mac Local without emulation, pass: --build-arg BASE_IMAGE=python:3.10-slim
+ARG BASE_IMAGE="nvidia/cuda:12.9.1-cudnn-devel-ubuntu24.04"
+FROM ${BASE_IMAGE}
+
+# Fix for non-interactive installs
+ENV DEBIAN_FRONTEND=noninteractive \
+    WORKDIR=/workspace \
+    COMFYUI_PATH=/opt/ComfyUI \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PATH="/opt/venv/bin:$PATH"
+
+# Arguments for build customization
+ARG USE_CUDA="true"
+ARG PIP_EXTRA_INDEX_URL="https://download.pytorch.org/whl/cu124"
+
+WORKDIR ${WORKDIR}
+
+# System dependencies
+# Removed python3.10 explicit install as it conflicts with default Ubuntu versions often.
+# relying on the base image's python or installing generic python3.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3-pip python3-venv python3-dev \
+    tini jq ca-certificates git build-essential \
+    cmake ninja-build wget curl ffmpeg \
+    libgl1-mesa-dev libopengl0 \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# Set up a virtual environment to avoid system conflicts
+RUN python3 -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+# Upgrade pip
+RUN pip install --upgrade pip setuptools wheel
+
+# Clone ComfyUI
+ARG COMFYUI_VERSION=master
+RUN git clone --single-branch https://github.com/comfyanonymous/ComfyUI.git ${COMFYUI_PATH} \
+    && git -C ${COMFYUI_PATH} reset --hard ${COMFYUI_VERSION}
+
+# Install PyTorch
+# We use the logic you provided but optimized for the venv
+COPY requirements.txt ${WORKDIR}/requirements.txt
+
+RUN if [ "${USE_CUDA}" = "true" ]; then \
+        echo "Installing CUDA PyTorch from ${PIP_EXTRA_INDEX_URL}"; \
+        pip install --index-url ${PIP_EXTRA_INDEX_URL} --no-cache-dir "torch" "torchvision" "torchaudio"; \
+    else \
+        echo "Installing CPU PyTorch"; \
+        pip install --no-cache-dir "torch" "torchvision" "torchaudio"; \
+    fi
+
+# Install ComfyUI Requirements
+RUN pip install --no-cache-dir -r ${WORKDIR}/requirements.txt \
+    && pip install --no-cache-dir -r ${COMFYUI_PATH}/requirements.txt \
+    && pip install --no-cache-dir pyyaml
+
+# Create necessary directories and set permissions
+RUN mkdir -p ${COMFYUI_PATH}/user \
+             ${COMFYUI_PATH}/output \
+             ${COMFYUI_PATH}/models \
+             ${COMFYUI_PATH}/custom_nodes \
+    && chmod -R 777 ${COMFYUI_PATH}
+
+# Copy the custom entrypoint script
+COPY entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
+EXPOSE 8188
+
+# Use the custom entrypoint
+ENTRYPOINT ["/usr/bin/tini", "--", "/usr/local/bin/entrypoint.sh"]

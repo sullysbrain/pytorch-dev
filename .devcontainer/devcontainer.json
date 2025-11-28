@@ -1,20 +1,23 @@
 {
-  "name": "pytorch-dev (local test)",
-  "dockerComposeFile": ["../docker-compose.yml"],
-  "service": "app",
-  "workspaceFolder": "/workspace",
-  "shutdownAction": "stopCompose",
-  "runServices": ["app"],
-  // "remoteUser": "comfy",
-  "customizations": {
-    "vscode": {
-      "settings": {
-        "terminal.integrated.shell.linux": "/bin/bash"
-      }
+  "name": "ComfyUI Dev",
+  // "dockerComposeFile": ["../docker-compose.yml"],
+  "build": {
+    "dockerfile": "../Dockerfile_cuda",
+    "args": {
+      "BASE_IMAGE": "python:3.10-slim",
+      "USE_CUDA": "false"
     }
   },
-  "containerEnv": {
-    "PYTHONUNBUFFERED": "1"
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python"
+        // "ms-azuretools.vscode-docker"
+      ]
+    }
   },
-  "overrideCommand": true
+  "forwardPorts": [8188],
+  "mounts": [
+    "source=${localWorkspaceFolder}/_data,target=/opt/ComfyUI/models/checkpoints,type=bind"
+  ]
 }

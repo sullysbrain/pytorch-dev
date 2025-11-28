@@ -1,13 +1,12 @@
-ARG BASE_IMAGE="nvidia/cuda:12.9.1-cudnn-devel-ubuntu24.04"
-ARG USE_CUDA="true"
-ARG DEBIAN_FRONTEND=noninteractive
+ARG BASE_IMAGE="nvidia/cuda:12.9.1-cudnn-devel-ubuntu24.04" \
+    && USE_CUDA="true" \
+    && DEBIAN_FRONTEND=noninteractive
 FROM ${BASE_IMAGE}
 
 ENV WORKDIR=/workspace \
     COMFYUI_PATH=/opt/ComfyUI \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1
-
 
 # Use the PyTorch cu129 index only when building the CUDA-enabled image.
 ARG PIP_EXTRA_INDEX_URL="https://download.pytorch.org/whl/cu129"
@@ -63,16 +62,14 @@ RUN mkdir -p /${COMFYUI_PATH} \
 #  && chown -R ${USER}:${USER} /models /data ${COMFYUI_PATH} ${WORKDIR} \
 
 # Persist the standard ComfyUI dirs
-VOLUME ["${COMFYUI_PATH}/user", "${COMFYUI_PATH}/output", "${COMFYUI_PATH}/models", "${COMFYUI_PATH}/models/checkpoints", "${COMFYUI_PATH}/custom_nodes"]
+VOLUME ["${COMFYUI_PATH}/user", "${COMFYUI_PATH}/output", "${COMFYUI_PATH}/models", "${COMFYUI_PATH}/custom_nodes"]
 
-# COPY .data/photoMomentum_sdxl_v20.safetensors "${COMFYUI_PATH}/models/checkpoints/photoMomentum_sdxl_v20.safetensors"
-# COPY ./_data/photoMomentum_sdxl_v20.safetensors "${COMFYUI_PATH}/models/checkpoints/photoMomentum_sdxl_v20.safetensors"
+COPY ./_data/photoMomentum_sdxl_v20.safetensors "${COMFYUI_PATH}/models/checkpoints/photoMomentum_sdxl_v20.safetensors"
 
 
 EXPOSE 8188
 
-# Run as root so mounted volumes are always writable
-# USER root
+USER root
 
 # Start ComfyUI directly (CPU on Mac/ARM; set USE_CUDA via args if you want a CUDA path elsewhere)
 ENTRYPOINT ["/usr/bin/tini","--","python3","-u","/opt/ComfyUI/main.py","--listen","127.0.0.1","--port","8188","--cpu","--disable-xformers"]

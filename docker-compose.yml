@@ -1,42 +1,22 @@
-version: "3.9"
-
 services:
-  app:
+  comfyui:
     build:
       context: .
-      dockerfile: .devcontainer/Dockerfile_cuda
       args:
-        # For local Mac builds we override the CUDA base image and disable CUDA installs.
-        BASE_IMAGE: "ubuntu:22.04"
-        USE_CUDA: "false"
-
+        # For Azure, we definitively want the NVIDIA base
+        BASE_IMAGE: "nvidia/cuda:12.4.1-cudnn-devel-ubuntu22.04"
+        USE_CUDA: "true"
+    image: my-comfyui-image:latest
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
     ports:
-      - "127.0.0.1:8188:8188"
-
-    # Mount workspace and provide named volumes for models and data
+      - "8188:8188"
     volumes:
-      - .:/workspace:cached
-      - ./_data:/opt/ComfyUI/models/checkpoints:rw
-      - ./comfy-test-nodes.json:/opt/ComfyUI/user/default/workflows/comfy-test-nodes.json:rw
-
-      # - models:/opt/ComfyUI/models
-      # - data:/opt/ComfyUI/data
-
-    environment:
-      - PYTHONUNBUFFERED=1
-      # - NVIDIA_VISIBLE_DEVICES=all
-
-    # GPU support (Docker Engine must support NVIDIA/container-toolkit)
-    # runtime: nvidia
-    # deploy:
-    #   resources:
-    #     reservations:
-    #       devices:
-    #         - driver: nvidia
-    #           count: all
-    #           capabilities: [gpu]
-
-volumes:
-  models:
-  data:
-
+      # In Azure, you would mount an Azure File Share to /mnt/azure_models
+      - ./_data:/opt/ComfyUI/models/checkpoints
+      - ./output:/opt/ComfyUI/output
