@@ -8,6 +8,14 @@ ENV WORKDIR=/workspace \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1
 
+# --- User/Group defaults used by devcontainer features and by you ---
+# ARG USER=comfy
+# ARG USER_UID=1000
+# ARG USER_GID=1000
+# RUN groupadd -g ${USER_GID} ${USER} || true \
+#  && id -u ${USER} >/dev/null 2>&1 || useradd -m -s /bin/bash -u ${USER_UID} -g ${USER_GID} ${USER}
+# ENV USER=${USER}
+
 # Use the PyTorch cu129 index only when building the CUDA-enabled image.
 ARG PIP_EXTRA_INDEX_URL="https://download.pytorch.org/whl/cu129"
 
@@ -28,13 +36,16 @@ RUN --mount=type=cache,target=/var/cache/apt \
 RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.10 1 \
  && python3 -m pip install --upgrade pip setuptools wheel
 
-# Create a non-root user for runtime
-ARG USER=comfy
-ARG UID=1000
-ARG USER_GID=1000
 
-RUN groupadd -g ${USER_GID} ${USER} \
- && useradd -m -s /bin/bash -u ${USER_UID} -g ${USER_GID} ${USER}
+
+# RUN groupadd -g ${USER_GID} ${USER} \
+#  && useradd -m -s /bin/bash -u ${USER_UID} -g ${USER_GID} ${USER}
+
+# Safe user/group creation if not already created by features
+# RUN set -eux; \
+#     if ! getent group "${USER_GID}" >/dev/null; then groupadd -g "${USER_GID}" "${USER}"; fi; \
+#     if ! id -u "${USER}" >/dev/null 2>&1; then useradd -m -s /bin/bash -u "${USER_UID}" -g "${USER_GID}" "${USER}"; fi
+
 
 
 # Clone ComfyUI early so layer is cached; pinable via build-arg later
@@ -60,35 +71,27 @@ RUN --mount=type=cache,target=/root/.cache/pip \
         && python3 -m pip install --no-cache-dir -r ${WORKDIR}/requirements.txt || true \
         && python3 -m pip install -v --no-build-isolation -U git+https://github.com/facebookresearch/xformers.git@main#egg=xformers || true
 
+RUN python3 -m pip install --upgrade pip \
+    && python3 -m pip install --no-cache-dir -r ${COMFYUI_PATH}/requirements.txt \
+    && python3 -m pip install --no-cache-dir pyyaml
 
 # Ensure permissions for volumes and workspace
 RUN mkdir -p /models /data \
- && chown -R ${USER}:${USER} /models /data ${COMFYUI_PATH} ${WORKDIR} \
+#  && chown -R ${USER}:${USER} /models /data ${COMFYUI_PATH} ${WORKDIR} \
  && chmod -R 775 ${COMFYUI_PATH} /models /data
 
 
-VOLUME [ "${COMFYUI_PATH}/user", "${COMFYUI_PATH}/output" , "${COMFYUI_PATH}/models", "${COMFYUI_PATH}/custom_nodes" ]
+# Make sure this matches where you cloned ComfyUI
+ENV COMFYUI_PATH=/opt/ComfyUI
+
+# Persist the standard ComfyUI dirs
+VOLUME ["${COMFYUI_PATH}/user", "${COMFYUI_PATH}/output", "${COMFYUI_PATH}/models", "${COMFYUI_PATH}/custom_nodes"]
 
 EXPOSE 8188
 
-RUN apt-get update && apt-get install -y --no-install-recommends gosu \
- && rm -rf /var/lib/apt/lists/*
+# Run as root so mounted volumes are always writable
+# USER root
 
-COPY .devcontainer/scripts/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
-RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+# Start ComfyUI directly (CPU on Mac/ARM; set USE_CUDA via args if you want a CUDA path elsewhere)
+ENTRYPOINT ["/usr/bin/tini","--","python3","-u","/opt/ComfyUI/main.py","--listen","127.0.0.1","--port","8188","--cpu","--disable-xformers"]
 
-COPY .devcontainer/scripts/start-comfyui.sh /usr/local/bin/start-comfyui.sh
-RUN chmod +x /usr/local/bin/start-comfyui.sh \
- && chown ${USERNAME}:${USERNAME} /usr/local/bin/start-comfyui.sh
-
-
-ENTRYPOINT [ "/usr/bin/tini", "--" ]
-
-COPY .devcontainer/scripts/start-comfyui.sh /usr/local/bin/start-comfyui.sh
-RUN chmod +x /usr/local/bin/start-comfyui.sh \
- && chown ${USER}:${USER} /usr/local/bin/start-comfyui.sh
-
-
-USER ${USER}
-WORKDIR ${WORKDIR}
-CMD [ "/usr/local/bin/start-comfyui.sh" ]

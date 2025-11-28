@@ -5,7 +5,7 @@
   "workspaceFolder": "/workspace",
   "shutdownAction": "stopCompose",
   "runServices": ["app"],
-  "remoteUser": "comfy",
+  // "remoteUser": "comfy",
   "customizations": {
     "vscode": {
       "settings": {

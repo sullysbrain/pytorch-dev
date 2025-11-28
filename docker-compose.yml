@@ -18,8 +18,8 @@ services:
       - .:/workspace:cached
       - models:/opt/ComfyUI/models
       - data:/opt/ComfyUI/data
-      - comfy_user:/opt/ComfyUI/user
-      - comfy_nodes:/opt/ComfyUI/nodes
+      # - comfy_user:/opt/ComfyUI/user
+      # - comfy_nodes:/opt/ComfyUI/nodes
 
     environment:
       - PYTHONUNBUFFERED=1
