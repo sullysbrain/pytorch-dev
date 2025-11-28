@@ -16,10 +16,11 @@ services:
     # Mount workspace and provide named volumes for models and data
     volumes:
       - .:/workspace:cached
-      - models:/opt/ComfyUI/models
-      - data:/opt/ComfyUI/data
-      # - comfy_user:/opt/ComfyUI/user
-      # - comfy_nodes:/opt/ComfyUI/nodes
+      - ./_data:/opt/ComfyUI/models/checkpoints:rw
+      - ./comfy-test-nodes.json:/opt/ComfyUI/user/default/workflows/comfy-test-nodes.json:rw
+
+      # - models:/opt/ComfyUI/models
+      # - data:/opt/ComfyUI/data
 
     environment:
       - PYTHONUNBUFFERED=1
@@ -38,6 +39,4 @@ services:
 volumes:
   models:
   data:
-  comfy_user:
-  comfy_nodes:
 

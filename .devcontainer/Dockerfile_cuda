@@ -8,13 +8,6 @@ ENV WORKDIR=/workspace \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1
 
-# --- User/Group defaults used by devcontainer features and by you ---
-# ARG USER=comfy
-# ARG USER_UID=1000
-# ARG USER_GID=1000
-# RUN groupadd -g ${USER_GID} ${USER} || true \
-#  && id -u ${USER} >/dev/null 2>&1 || useradd -m -s /bin/bash -u ${USER_UID} -g ${USER_GID} ${USER}
-# ENV USER=${USER}
 
 # Use the PyTorch cu129 index only when building the CUDA-enabled image.
 ARG PIP_EXTRA_INDEX_URL="https://download.pytorch.org/whl/cu129"
@@ -35,17 +28,6 @@ RUN --mount=type=cache,target=/var/cache/apt \
 # Ensure /usr/bin/python3 and pip point to python0 and pip for consistency
 RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.10 1 \
  && python3 -m pip install --upgrade pip setuptools wheel
-
-
-
-# RUN groupadd -g ${USER_GID} ${USER} \
-#  && useradd -m -s /bin/bash -u ${USER_UID} -g ${USER_GID} ${USER}
-
-# Safe user/group creation if not already created by features
-# RUN set -eux; \
-#     if ! getent group "${USER_GID}" >/dev/null; then groupadd -g "${USER_GID}" "${USER}"; fi; \
-#     if ! id -u "${USER}" >/dev/null 2>&1; then useradd -m -s /bin/bash -u "${USER_UID}" -g "${USER_GID}" "${USER}"; fi
-
 
 
 # Clone ComfyUI early so layer is cached; pinable via build-arg later
@@ -76,16 +58,16 @@ RUN python3 -m pip install --upgrade pip \
     && python3 -m pip install --no-cache-dir pyyaml
 
 # Ensure permissions for volumes and workspace
-RUN mkdir -p /models /data \
+RUN mkdir -p /${COMFYUI_PATH} \
+ && chmod -R 775 ${COMFYUI_PATH}
 #  && chown -R ${USER}:${USER} /models /data ${COMFYUI_PATH} ${WORKDIR} \
- && chmod -R 775 ${COMFYUI_PATH} /models /data
-
-
-# Make sure this matches where you cloned ComfyUI
-ENV COMFYUI_PATH=/opt/ComfyUI
 
 # Persist the standard ComfyUI dirs
-VOLUME ["${COMFYUI_PATH}/user", "${COMFYUI_PATH}/output", "${COMFYUI_PATH}/models", "${COMFYUI_PATH}/custom_nodes"]
+VOLUME ["${COMFYUI_PATH}/user", "${COMFYUI_PATH}/output", "${COMFYUI_PATH}/models", "${COMFYUI_PATH}/models/checkpoints", "${COMFYUI_PATH}/custom_nodes"]
+
+# COPY .data/photoMomentum_sdxl_v20.safetensors "${COMFYUI_PATH}/models/checkpoints/photoMomentum_sdxl_v20.safetensors"
+# COPY ./_data/photoMomentum_sdxl_v20.safetensors "${COMFYUI_PATH}/models/checkpoints/photoMomentum_sdxl_v20.safetensors"
+
 
 EXPOSE 8188
 
